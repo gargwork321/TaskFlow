@@ -147,3 +147,28 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# React Native / Metro
+node_modules/
+.metro-health-check*
+
+# React Native build outputs
+ios/build/
+android/build/
+android/app/build/
+android/.gradle/
+
+# CocoaPods generated files
+ios/Pods/
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+# Local Xcode environment
+ios/.xcode.env.local
+
+# Android debug signing key
+android/app/debug.keystore
+
+# Android debug signing key
+android/app/debug.keystore
