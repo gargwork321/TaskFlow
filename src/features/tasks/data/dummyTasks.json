@@ -1,0 +1,88 @@
+[
+  {
+    "id": "task-001",
+    "title": "Prepare for React Native interview",
+    "description": "Review navigation, hooks, performance, and native modules.",
+    "priority": "high",
+    "isCompleted": false,
+    "dueDate": "2026-10-24T12:00:00.000Z",
+    "createdAt": "2026-10-21T12:00:00.000Z",
+    "updatedAt": "2026-10-23T09:00:00.000Z",
+    "syncStatus": "pending"
+  },
+  {
+    "id": "task-002",
+    "title": "Build TaskFlow task list UI",
+    "description": "Create task cards with priority, due date, and completion state.",
+    "priority": "high",
+    "isCompleted": false,
+    "dueDate": "2026-10-25T12:00:00.000Z",
+    "createdAt": "2026-10-22T12:00:00.000Z",
+    "updatedAt": "2026-10-22T12:00:00.000Z",
+    "syncStatus": "pending"
+  },
+  {
+    "id": "task-003",
+    "title": "Review TypeScript data models",
+    "description": "Check optional fields, union types, and task validation rules.",
+    "priority": "medium",
+    "isCompleted": false,
+    "dueDate": "2026-10-27T12:00:00.000Z",
+    "createdAt": "2026-10-20T12:00:00.000Z",
+    "updatedAt": "2026-10-21T12:00:00.000Z",
+    "syncStatus": "synced"
+  },
+  {
+    "id": "task-004",
+    "title": "Set up bottom tab navigation",
+    "description": "Configure Tasks, Calendar, Stats, and Settings tabs.",
+    "priority": "medium",
+    "isCompleted": true,
+    "dueDate": "2026-10-22T12:00:00.000Z",
+    "createdAt": "2026-10-18T12:00:00.000Z",
+    "updatedAt": "2026-10-22T12:00:00.000Z",
+    "syncStatus": "synced"
+  },
+  {
+    "id": "task-005",
+    "title": "Write project README",
+    "description": "Document setup instructions, architecture, and offline-first decisions.",
+    "priority": "low",
+    "isCompleted": false,
+    "createdAt": "2026-10-23T07:00:00.000Z",
+    "updatedAt": "2026-10-23T07:00:00.000Z",
+    "syncStatus": "failed"
+  },
+  {
+    "id": "task-006",
+    "title": "Add task validation tests",
+    "description": "Cover blank titles and whitespace-only input.",
+    "priority": "high",
+    "isCompleted": true,
+    "createdAt": "2026-10-16T12:00:00.000Z",
+    "updatedAt": "2026-10-17T12:00:00.000Z",
+    "syncStatus": "synced"
+  },
+  {
+    "id": "task-007",
+    "title": "Plan offline sync queue",
+    "description": "Define operation IDs, retries, and deletion tombstones.",
+    "priority": "low",
+    "isCompleted": false,
+    "dueDate": "2026-10-30T12:00:00.000Z",
+    "createdAt": "2026-10-23T10:00:00.000Z",
+    "updatedAt": "2026-10-23T10:00:00.000Z",
+    "syncStatus": "pending"
+  },
+  {
+    "id": "task-008",
+    "title": "Review weekly progress",
+    "description": "Check completed tasks and reprioritize the next week.",
+    "priority": "medium",
+    "isCompleted": false,
+    "dueDate": "2026-10-28T12:00:00.000Z",
+    "createdAt": "2026-10-13T12:00:00.000Z",
+    "updatedAt": "2026-10-22T12:00:00.000Z",
+    "syncStatus": "synced"
+  }
+]

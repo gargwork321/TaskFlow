@@ -151,11 +151,13 @@ vite.config.ts.timestamp-*
 # React Native / Metro
 node_modules/
 .metro-health-check*
+**/.DS_Store
 
 # React Native build outputs
 ios/build/
 android/build/
 android/app/build/
+android/app/.cxx/
 android/.gradle/
 
 # CocoaPods generated files
