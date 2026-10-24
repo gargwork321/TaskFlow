@@ -196,6 +196,17 @@ export const createTasksStyles = (colors: {
     iconColor: {
       color: colors.secondaryText,
     },
+    menuOverlay: {
+      flex: 1,
+    },
+    menuBackdrop: {
+      backgroundColor: 'transparent',
+      bottom: 0,
+      left: 0,
+      position: 'absolute',
+      right: 0,
+      top: 0,
+    },
     taskMenu: {
       backgroundColor: colors.surface,
       borderColor: colors.border,

@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import type React from 'react';
 import {
   Alert,
+  Dimensions,
   FlatList,
   Modal,
   Pressable,
@@ -13,6 +15,7 @@ import {
   ArrowLeft,
   Bell,
   EllipsisVertical,
+  FileText,
   Pencil,
   Plus,
   Search,
@@ -28,9 +31,11 @@ import type {
   TaskSyncStatus,
 } from '../../domain/Task';
 import CreateTask from '../CreateTask';
+import TaskDetails from '../TaskDetails';
 
 type TaskFilter = 'All' | 'Active' | 'Completed';
 type TasksStyles = ReturnType<typeof createTasksStyles>;
+type MenuPosition = { top: number; right: number };
 
 const filters: TaskFilter[] = ['All', 'Active', 'Completed'];
 
@@ -87,22 +92,31 @@ const TaskItem = ({
   styles,
   onToggle,
   menuOpen,
+  onOpenDetails,
   onMenuPress,
-  onEdit,
-  onDelete,
 }: {
   item: Task;
   styles: TasksStyles;
   onToggle: () => void;
   menuOpen: boolean;
-  onMenuPress: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
+  onOpenDetails: () => void;
+  onMenuPress: (position: MenuPosition) => void;
 }) => {
   const priorityColor = priorityColors[item.priority];
+  const moreButtonRef = useRef<React.ComponentRef<typeof Pressable>>(null);
+  const { width: windowWidth } = Dimensions.get('window');
+
+  const measureMenuAnchor = () => {
+    moreButtonRef.current?.measureInWindow((x, y, width, height) => {
+      onMenuPress({
+        top: y + height,
+        right: Math.max(8, windowWidth - x - width),
+      });
+    });
+  };
 
   return (
-    <View style={[styles.itemWrapper, menuOpen && styles.itemWrapperOpen]}>
+    <View style={styles.itemWrapper}>
       <View style={styles.itemContainer}>
         <Pressable
           accessibilityRole="checkbox"
@@ -116,7 +130,12 @@ const TaskItem = ({
         >
           {item.isCompleted && <Text style={styles.completionCheck}>✓</Text>}
         </Pressable>
-        <View style={styles.taskContent}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`View details for ${item.title}`}
+          onPress={onOpenDetails}
+          style={styles.taskContent}
+        >
           <Text
             numberOfLines={1}
             style={[
@@ -147,39 +166,19 @@ const TaskItem = ({
               </>
             )}
           </View>
-        </View>
+        </Pressable>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`More options for ${item.title}`}
           accessibilityState={{ expanded: menuOpen }}
           hitSlop={10}
-          onPress={onMenuPress}
+          onPress={measureMenuAnchor}
+          ref={moreButtonRef}
           style={styles.moreButton}
         >
           <EllipsisVertical color={styles.iconColor.color} size={20} />
         </Pressable>
       </View>
-      {menuOpen && (
-        <View style={styles.taskMenu}>
-          <Pressable
-            accessibilityRole="button"
-            onPress={onEdit}
-            style={styles.taskMenuItem}
-          >
-            <Pencil color={styles.iconColor.color} size={17} />
-            <Text style={styles.taskMenuText}>Edit</Text>
-          </Pressable>
-          <View style={styles.taskMenuDivider} />
-          <Pressable
-            accessibilityRole="button"
-            onPress={onDelete}
-            style={styles.taskMenuItem}
-          >
-            <Trash2 color="#EF4444" size={17} />
-            <Text style={styles.deleteMenuText}>Delete</Text>
-          </Pressable>
-        </View>
-      )}
     </View>
   );
 };
@@ -193,7 +192,15 @@ const Tasks = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [detailsTaskId, setDetailsTaskId] = useState<string | null>(null);
+  const [returnToDetailsAfterEdit, setReturnToDetailsAfterEdit] =
+    useState(false);
   const [openMenuTaskId, setOpenMenuTaskId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
+  const { height: windowHeight } = Dimensions.get('window');
+  const detailsTask =
+    tasks.find(task => task.id === detailsTaskId) ?? null;
+  const menuTask = tasks.find(task => task.id === openMenuTaskId) ?? null;
 
   const visibleTasks = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase();
@@ -242,14 +249,19 @@ const Tasks = () => {
       ),
     );
     setEditingTask(null);
+    if (returnToDetailsAfterEdit) {
+      setDetailsTaskId(task.id);
+      setReturnToDetailsAfterEdit(false);
+    }
   };
 
   const closeTaskForm = () => {
     setShowCreateTask(false);
     setEditingTask(null);
+    setReturnToDetailsAfterEdit(false);
   };
 
-  const confirmDeleteTask = (task: Task) => {
+  const confirmDeleteTask = (task: Task, closeDetails = false) => {
     setOpenMenuTaskId(null);
     Alert.alert(
       'Delete task',
@@ -260,11 +272,41 @@ const Tasks = () => {
           text: 'Delete',
           style: 'destructive',
           onPress: () =>
-            setTasks(currentTasks =>
-              currentTasks.filter(currentTask => currentTask.id !== task.id),
-            ),
+            {
+              setTasks(currentTasks =>
+                currentTasks.filter(currentTask => currentTask.id !== task.id),
+              );
+              if (closeDetails) {
+                setDetailsTaskId(null);
+              }
+            },
         },
       ],
+    );
+  };
+
+  const duplicateTask = (task: Task) => {
+    const now = new Date().toISOString();
+    const duplicate: Task = {
+      ...task,
+      id: `task-${Date.now()}`,
+      title: `${task.title} (copy)`,
+      isCompleted: false,
+      createdAt: now,
+      updatedAt: now,
+      syncStatus: 'pending',
+    };
+    setTasks(currentTasks => [duplicate, ...currentTasks]);
+    setDetailsTaskId(null);
+  };
+
+  const updateTaskDetails = (taskId: string, updates: Partial<Task>) => {
+    setTasks(currentTasks =>
+      currentTasks.map(task =>
+        task.id === taskId
+          ? { ...task, ...updates, updatedAt: new Date().toISOString() }
+          : task,
+      ),
     );
   };
 
@@ -346,16 +388,20 @@ const Tasks = () => {
             styles={styles}
             onToggle={() => toggleTask(item.id)}
             menuOpen={openMenuTaskId === item.id}
-            onMenuPress={() =>
-              setOpenMenuTaskId(current =>
-                current === item.id ? null : item.id,
-              )
-            }
-            onEdit={() => {
-              setOpenMenuTaskId(null);
-              setEditingTask(item);
+            onMenuPress={position => {
+              if (openMenuTaskId === item.id) {
+                setOpenMenuTaskId(null);
+                setMenuPosition(null);
+              } else {
+                setOpenMenuTaskId(item.id);
+                setMenuPosition(position);
+              }
             }}
-            onDelete={() => confirmDeleteTask(item)}
+            onOpenDetails={() => {
+              setOpenMenuTaskId(null);
+              setMenuPosition(null);
+              setDetailsTaskId(item.id);
+            }}
           />
         )}
         ListEmptyComponent={
@@ -373,17 +419,112 @@ const Tasks = () => {
         <Plus color="#FFFFFF" size={30} strokeWidth={2.5} />
       </Pressable>
       <Modal
+        animationType="fade"
+        onRequestClose={() => {
+          setOpenMenuTaskId(null);
+          setMenuPosition(null);
+        }}
+        statusBarTranslucent
+        transparent
+        visible={menuTask !== null && menuPosition !== null}
+      >
+        <View style={styles.menuOverlay}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss task menu"
+            onPress={() => {
+              setOpenMenuTaskId(null);
+              setMenuPosition(null);
+            }}
+            style={styles.menuBackdrop}
+          />
+          {menuTask && menuPosition && (
+            <View
+              style={[
+                styles.taskMenu,
+                {
+                  right: menuPosition.right,
+                  top: Math.min(menuPosition.top, windowHeight - 150),
+                },
+              ]}
+            >
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  setOpenMenuTaskId(null);
+                  setMenuPosition(null);
+                  setDetailsTaskId(menuTask.id);
+                }}
+                style={styles.taskMenuItem}
+              >
+                <FileText color={styles.iconColor.color} size={17} />
+                <Text style={styles.taskMenuText}>View Details</Text>
+              </Pressable>
+              <View style={styles.taskMenuDivider} />
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  setOpenMenuTaskId(null);
+                  setMenuPosition(null);
+                  setReturnToDetailsAfterEdit(false);
+                  setEditingTask(menuTask);
+                }}
+                style={styles.taskMenuItem}
+              >
+                <Pencil color={styles.iconColor.color} size={17} />
+                <Text style={styles.taskMenuText}>Edit</Text>
+              </Pressable>
+              <View style={styles.taskMenuDivider} />
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => confirmDeleteTask(menuTask)}
+                style={styles.taskMenuItem}
+              >
+                <Trash2 color="#EF4444" size={17} />
+                <Text style={styles.deleteMenuText}>Delete</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      </Modal>
+      <Modal
         animationType="slide"
         onRequestClose={closeTaskForm}
         presentationStyle="fullScreen"
-        visible={showCreateTask || editingTask !== null}
+        visible={
+          showCreateTask || editingTask !== null || detailsTask !== null
+        }
       >
-        <CreateTask
-          key={editingTask?.id ?? 'new-task'}
-          initialTask={editingTask ?? undefined}
-          onCancel={closeTaskForm}
-          onSave={editingTask ? updateTask : addTask}
-        />
+        {detailsTask ? (
+          <TaskDetails
+            key={`details-${detailsTask.id}`}
+            task={detailsTask}
+            onBack={() => setDetailsTaskId(null)}
+            onEdit={() => {
+              setReturnToDetailsAfterEdit(true);
+              setEditingTask(detailsTask);
+              setDetailsTaskId(null);
+            }}
+            onDelete={() => confirmDeleteTask(detailsTask, true)}
+            onDuplicate={() => duplicateTask(detailsTask)}
+            onToggleComplete={() =>
+              updateTaskDetails(detailsTask.id, {
+                isCompleted: !detailsTask.isCompleted,
+              })
+            }
+            onMoveTo={list => updateTaskDetails(detailsTask.id, { list })}
+            onSetReminder={reminder =>
+              updateTaskDetails(detailsTask.id, { reminder })
+            }
+          />
+        ) : (
+          <CreateTask
+            key={editingTask?.id ?? 'new-task'}
+            initialTask={editingTask ?? undefined}
+            onCancel={closeTaskForm}
+            onSave={editingTask ? updateTask : addTask}
+          />
+        )}
       </Modal>
     </SafeAreaView>
   );
