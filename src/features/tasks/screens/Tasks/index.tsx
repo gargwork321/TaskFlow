@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   FlatList,
   Pressable,
+  RefreshControl,
   Text,
   TextInput,
   View,
@@ -125,6 +126,7 @@ const Tasks = () => {
   const [filter, setFilter] = useState<TaskFilter>('All');
   const [searchText, setSearchText] = useState('');
   const [tasks, setTasks] = useState<Task[]>(dummyTasks);
+  const [refreshing, setRefreshing] = useState(false);
 
   const visibleTasks = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase();
@@ -146,6 +148,12 @@ const Tasks = () => {
         task.id === taskId ? { ...task, isCompleted: !task.isCompleted } : task,
       ),
     );
+  };
+
+  const refreshTasks = () => {
+    setRefreshing(true);
+    setTasks(dummyTasks.map(task => ({ ...task })));
+    setRefreshing(false);
   };
 
   return (
@@ -212,6 +220,14 @@ const Tasks = () => {
         contentContainerStyle={styles.listContent}
         data={visibleTasks}
         keyExtractor={item => item.id}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refreshTasks}
+            tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+          />
+        }
         renderItem={({ item }) => (
           <TaskItem
             item={item}
