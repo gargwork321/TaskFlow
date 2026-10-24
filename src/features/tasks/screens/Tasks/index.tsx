@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   FlatList,
+  Modal,
   Pressable,
   RefreshControl,
   Text,
@@ -18,8 +19,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '../../../../shared/theme/useAppTheme';
 import { createTasksStyles } from './styles';
 import dummyTasks from '../../data/dummyTasks.json';
+import type {
+  Task,
+  TaskPriority,
+  TaskSyncStatus,
+} from '../../domain/Task';
+import CreateTask from '../CreateTask';
 
-type Task = (typeof dummyTasks)[number];
 type TaskFilter = 'All' | 'Active' | 'Completed';
 type TasksStyles = ReturnType<typeof createTasksStyles>;
 
@@ -30,6 +36,25 @@ const priorityColors: Record<Task['priority'], string> = {
   medium: '#F59E0B',
   low: '#10A875',
 };
+
+const taskPriorities: TaskPriority[] = ['low', 'medium', 'high'];
+const syncStatuses: TaskSyncStatus[] = ['synced', 'pending', 'failed'];
+const isTaskPriority = (value: string): value is TaskPriority =>
+  taskPriorities.some(priority => priority === value);
+const isSyncStatus = (value: string): value is TaskSyncStatus =>
+  syncStatuses.some(status => status === value);
+
+const sampleTasks: Task[] = dummyTasks.map(task => {
+  if (!isTaskPriority(task.priority) || !isSyncStatus(task.syncStatus)) {
+    throw new Error(`Invalid task data for ${task.id}`);
+  }
+
+  return {
+    ...task,
+    priority: task.priority,
+    syncStatus: task.syncStatus,
+  };
+});
 
 const formatDueDate = (date: string) => {
   const dueDate = new Date(date);
@@ -125,8 +150,9 @@ const Tasks = () => {
   const styles = createTasksStyles(theme.colors);
   const [filter, setFilter] = useState<TaskFilter>('All');
   const [searchText, setSearchText] = useState('');
-  const [tasks, setTasks] = useState<Task[]>(dummyTasks);
+  const [tasks, setTasks] = useState<Task[]>(sampleTasks);
   const [refreshing, setRefreshing] = useState(false);
+  const [showCreateTask, setShowCreateTask] = useState(false);
 
   const visibleTasks = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase();
@@ -152,8 +178,20 @@ const Tasks = () => {
 
   const refreshTasks = () => {
     setRefreshing(true);
-    setTasks(dummyTasks.map(task => ({ ...task })));
+    setTasks(currentTasks => [
+      ...currentTasks.filter(
+        task => !sampleTasks.some(sampleTask => sampleTask.id === task.id),
+      ),
+      ...sampleTasks.map(task => ({ ...task })),
+    ]);
     setRefreshing(false);
+  };
+
+  const addTask = (task: Task) => {
+    setTasks(currentTasks => [task, ...currentTasks]);
+    setFilter('All');
+    setSearchText('');
+    setShowCreateTask(false);
   };
 
   return (
@@ -244,10 +282,22 @@ const Tasks = () => {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Add task"
+        onPress={() => setShowCreateTask(true)}
         style={styles.addButton}
       >
         <Plus color="#FFFFFF" size={30} strokeWidth={2.5} />
       </Pressable>
+      <Modal
+        animationType="slide"
+        onRequestClose={() => setShowCreateTask(false)}
+        presentationStyle="fullScreen"
+        visible={showCreateTask}
+      >
+        <CreateTask
+          onCancel={() => setShowCreateTask(false)}
+          onSave={addTask}
+        />
+      </Modal>
     </SafeAreaView>
   );
 };

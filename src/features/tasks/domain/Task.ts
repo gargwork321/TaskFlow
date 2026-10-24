@@ -13,5 +13,7 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
   syncStatus: TaskSyncStatus;
+  list?: string;
+  reminder?: string;
   deletedAt?: string;
 }
