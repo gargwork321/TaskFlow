@@ -111,13 +111,34 @@ export const createCreateTaskStyles = (colors: {
     inlineIcon: {
       color: colors.secondaryText,
     },
+    clockModalRoot: {
+      alignItems: 'center',
+      flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+    },
+    clockBackdrop: {
+      backgroundColor: 'rgba(0, 0, 0, 0.45)',
+      bottom: 0,
+      left: 0,
+      position: 'absolute',
+      right: 0,
+      top: 0,
+    },
     clockPicker: {
       backgroundColor: colors.surface,
       borderColor: colors.border,
       borderRadius: 14,
       borderWidth: 1,
-      marginTop: 10,
+      maxWidth: 420,
       padding: 12,
+      width: '100%',
+    },
+    clockTitle: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: '700',
+      marginBottom: 12,
     },
     clockHeader: {
       alignItems: 'center',
@@ -202,6 +223,36 @@ export const createCreateTaskStyles = (colors: {
     },
     selectedTimeOptionText: {
       color: colors.surface,
+      fontWeight: '700',
+    },
+    clockActions: {
+      borderTopColor: colors.border,
+      borderTopWidth: 1,
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      marginTop: 12,
+      paddingTop: 10,
+    },
+    clockAction: {
+      alignItems: 'center',
+      borderRadius: 10,
+      justifyContent: 'center',
+      minHeight: 42,
+      minWidth: 84,
+      paddingHorizontal: 12,
+    },
+    clockCancelText: {
+      color: colors.secondaryText,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    clockConfirmButton: {
+      backgroundColor: colors.primary,
+      marginLeft: 8,
+    },
+    clockConfirmText: {
+      color: colors.surface,
+      fontSize: 14,
       fontWeight: '700',
     },
     calendar: {

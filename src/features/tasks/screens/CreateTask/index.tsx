@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -27,6 +28,7 @@ import { createCreateTaskStyles } from './styles';
 type CreateTaskProps = {
   onCancel: () => void;
   onSave: (task: Task) => void;
+  initialTask?: Task;
 };
 
 const priorities: TaskPriority[] = ['low', 'medium', 'high'];
@@ -100,28 +102,50 @@ const isValidDate = (value: string) => {
 const isValidTime = (value: string) =>
   /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
 
-const CreateTask = ({ onCancel, onSave }: CreateTaskProps) => {
+const CreateTask = ({ onCancel, onSave, initialTask }: CreateTaskProps) => {
   const theme = useAppTheme();
   const styles = createCreateTaskStyles(theme.colors);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState<TaskPriority>('medium');
-  const [dueDate, setDueDate] = useState('');
-  const [dueTime, setDueTime] = useState('');
+  const initialDueDate = initialTask?.dueDate
+    ? new Date(initialTask.dueDate)
+    : undefined;
+  const [title, setTitle] = useState(initialTask?.title ?? '');
+  const [description, setDescription] = useState(
+    initialTask?.description ?? '',
+  );
+  const [priority, setPriority] = useState<TaskPriority>(
+    initialTask?.priority ?? 'medium',
+  );
+  const [dueDate, setDueDate] = useState(
+    initialDueDate && !Number.isNaN(initialDueDate.getTime())
+      ? formatDate(initialDueDate)
+      : '',
+  );
+  const [dueTime, setDueTime] = useState(
+    initialDueDate && !Number.isNaN(initialDueDate.getTime())
+      ? `${`${initialDueDate.getHours()}`.padStart(2, '0')}:${`${initialDueDate.getMinutes()}`.padStart(2, '0')}`
+      : '',
+  );
   const [calendarMonth, setCalendarMonth] = useState(() => {
-    const today = new Date();
-    return new Date(today.getFullYear(), today.getMonth(), 1);
+    const date = initialDueDate ?? new Date();
+    return new Date(date.getFullYear(), date.getMonth(), 1);
   });
   const [showCalendar, setShowCalendar] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [timePickerStep, setTimePickerStep] = useState<TimePickerStep>('hour');
   const [selectedTime, setSelectedTime] = useState(() => {
-    const date = new Date();
-    date.setHours(12, 0, 0, 0);
-    return date;
+    if (initialDueDate && !Number.isNaN(initialDueDate.getTime())) {
+      return new Date(initialDueDate);
+    }
+    const noon = new Date();
+    noon.setHours(12, 0, 0, 0);
+    return noon;
   });
-  const [taskList, setTaskList] = useState(taskLists[0].value);
-  const [reminder, setReminder] = useState(reminders[0].value);
+  const [taskList, setTaskList] = useState(
+    initialTask?.list ?? taskLists[0].value,
+  );
+  const [reminder, setReminder] = useState(
+    initialTask?.reminder ?? reminders[0].value,
+  );
   const [error, setError] = useState('');
 
   const saveTask = () => {
@@ -158,15 +182,16 @@ const CreateTask = ({ onCancel, onSave }: CreateTaskProps) => {
         })()
       : undefined;
     onSave({
-      id: `task-${Date.now()}`,
+      ...initialTask,
+      id: initialTask?.id ?? `task-${Date.now()}`,
       title: normalizedTitle,
       description: description.trim() || undefined,
       priority,
-      isCompleted: false,
+      isCompleted: initialTask?.isCompleted ?? false,
       dueDate: dueDateTime,
-      createdAt: now,
+      createdAt: initialTask?.createdAt ?? now,
       updatedAt: now,
-      syncStatus: 'pending',
+      syncStatus: initialTask?.syncStatus ?? 'pending',
       list: taskList,
       reminder,
     });
@@ -238,8 +263,11 @@ const CreateTask = ({ onCancel, onSave }: CreateTaskProps) => {
     const nextTime = new Date(selectedTime);
     nextTime.setMinutes(minute, 0, 0);
     setSelectedTime(nextTime);
+  };
+
+  const confirmTime = () => {
     setDueTime(
-      `${`${nextTime.getHours()}`.padStart(2, '0')}:${`${minute}`.padStart(2, '0')}`,
+      `${`${selectedTime.getHours()}`.padStart(2, '0')}:${`${selectedTime.getMinutes()}`.padStart(2, '0')}`,
     );
     setShowTimePicker(false);
     setError('');
@@ -272,13 +300,17 @@ const CreateTask = ({ onCancel, onSave }: CreateTaskProps) => {
             >
               <X color={theme.colors.text} size={24} />
             </Pressable>
-            <Text style={styles.headerTitle}>Create Task</Text>
+            <Text style={styles.headerTitle}>
+              {initialTask ? 'Edit Task' : 'Create Task'}
+            </Text>
             <Pressable
               accessibilityRole="button"
               onPress={saveTask}
               style={styles.saveButton}
             >
-              <Text style={styles.saveText}>Save</Text>
+              <Text style={styles.saveText}>
+                {initialTask ? 'Update' : 'Save'}
+              </Text>
             </Pressable>
           </View>
 
@@ -478,129 +510,6 @@ const CreateTask = ({ onCancel, onSave }: CreateTaskProps) => {
                 size={20}
               />
             </Pressable>
-            {showTimePicker && (
-              <View style={styles.clockPicker}>
-                <View style={styles.clockHeader}>
-                  <Text style={styles.clockTime}>
-                    {selectedTime.toLocaleTimeString(undefined, {
-                      hour: 'numeric',
-                      minute: '2-digit',
-                    })}
-                  </Text>
-                  <View style={styles.periodOptions}>
-                    {[false, true].map(isAfternoon => {
-                      const selected =
-                        (selectedTime.getHours() >= 12) === isAfternoon;
-                      return (
-                        <Pressable
-                          accessibilityRole="radio"
-                          accessibilityState={{ selected }}
-                          key={isAfternoon ? 'pm' : 'am'}
-                          onPress={() => setTimePeriod(isAfternoon)}
-                          style={[
-                            styles.periodButton,
-                            selected && styles.selectedPeriod,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.periodText,
-                              selected && styles.selectedPeriodText,
-                            ]}
-                          >
-                            {isAfternoon ? 'PM' : 'AM'}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
-                <View style={styles.clockTabs}>
-                  {(['hour', 'minute'] as const).map(step => (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: timePickerStep === step }}
-                      key={step}
-                      onPress={() => setTimePickerStep(step)}
-                      style={[
-                        styles.clockTab,
-                        timePickerStep === step && styles.selectedClockTab,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.clockTabText,
-                          timePickerStep === step &&
-                            styles.selectedClockTabText,
-                        ]}
-                      >
-                        {step === 'hour' ? 'Hour' : 'Minute'}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-                <ScrollView
-                  nestedScrollEnabled
-                  showsVerticalScrollIndicator={false}
-                  style={styles.timeOptions}
-                  contentContainerStyle={styles.timeOptionsContent}
-                >
-                  {timePickerStep === 'hour'
-                    ? clockHours.map(hour => {
-                        const selected =
-                          selectedTime.getHours() % 12 === hour % 12;
-                        return (
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={`${hour} o'clock`}
-                            accessibilityState={{ selected }}
-                            key={hour}
-                            onPress={() => selectHour(hour)}
-                            style={[
-                              styles.timeOption,
-                              selected && styles.selectedTimeOption,
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.timeOptionText,
-                                selected && styles.selectedTimeOptionText,
-                              ]}
-                            >
-                              {hour}
-                            </Text>
-                          </Pressable>
-                        );
-                      })
-                    : clockMinutes.map(minute => {
-                        const selected =
-                          selectedTime.getMinutes() === minute;
-                        return (
-                          <Pressable
-                            accessibilityRole="button"
-                            accessibilityLabel={`${minute} minutes`}
-                            accessibilityState={{ selected }}
-                            key={minute}
-                            onPress={() => selectMinute(minute)}
-                            style={[
-                              styles.timeOption,
-                              selected && styles.selectedTimeOption,
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.timeOptionText,
-                                selected && styles.selectedTimeOptionText,
-                              ]}
-                            >
-                              {`${minute}`.padStart(2, '0')}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                </ScrollView>
-              </View>
-            )}
             <Text style={styles.helperText}>
               Select a time or leave blank to use 12:00 PM.
             </Text>
@@ -671,6 +580,157 @@ const CreateTask = ({ onCancel, onSave }: CreateTaskProps) => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <Modal
+        animationType="fade"
+        onRequestClose={() => setShowTimePicker(false)}
+        transparent
+        visible={showTimePicker}
+      >
+        <View style={styles.clockModalRoot}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close time picker"
+            onPress={() => setShowTimePicker(false)}
+            style={styles.clockBackdrop}
+          />
+          <View style={styles.clockPicker}>
+            <Text style={styles.clockTitle}>Select due time</Text>
+            <View style={styles.clockHeader}>
+              <Text style={styles.clockTime}>
+                {selectedTime.toLocaleTimeString(undefined, {
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })}
+              </Text>
+              <View style={styles.periodOptions}>
+                {[false, true].map(isAfternoon => {
+                  const selected =
+                    (selectedTime.getHours() >= 12) === isAfternoon;
+                  return (
+                    <Pressable
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected }}
+                      key={isAfternoon ? 'pm' : 'am'}
+                      onPress={() => setTimePeriod(isAfternoon)}
+                      style={[
+                        styles.periodButton,
+                        selected && styles.selectedPeriod,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.periodText,
+                          selected && styles.selectedPeriodText,
+                        ]}
+                      >
+                        {isAfternoon ? 'PM' : 'AM'}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+            <View style={styles.clockTabs}>
+              {(['hour', 'minute'] as const).map(step => (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: timePickerStep === step }}
+                  key={step}
+                  onPress={() => setTimePickerStep(step)}
+                  style={[
+                    styles.clockTab,
+                    timePickerStep === step && styles.selectedClockTab,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.clockTabText,
+                      timePickerStep === step && styles.selectedClockTabText,
+                    ]}
+                  >
+                    {step === 'hour' ? 'Hour' : 'Minute'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <ScrollView
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={false}
+              style={styles.timeOptions}
+              contentContainerStyle={styles.timeOptionsContent}
+            >
+              {timePickerStep === 'hour'
+                ? clockHours.map(hour => {
+                    const selected =
+                      selectedTime.getHours() % 12 === hour % 12;
+                    return (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`${hour} o'clock`}
+                        accessibilityState={{ selected }}
+                        key={hour}
+                        onPress={() => selectHour(hour)}
+                        style={[
+                          styles.timeOption,
+                          selected && styles.selectedTimeOption,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.timeOptionText,
+                            selected && styles.selectedTimeOptionText,
+                          ]}
+                        >
+                          {hour}
+                        </Text>
+                      </Pressable>
+                    );
+                  })
+                : clockMinutes.map(minute => {
+                    const selected = selectedTime.getMinutes() === minute;
+                    return (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`${minute} minutes`}
+                        accessibilityState={{ selected }}
+                        key={minute}
+                        onPress={() => selectMinute(minute)}
+                        style={[
+                          styles.timeOption,
+                          selected && styles.selectedTimeOption,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.timeOptionText,
+                            selected && styles.selectedTimeOptionText,
+                          ]}
+                        >
+                          {`${minute}`.padStart(2, '0')}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+            </ScrollView>
+            <View style={styles.clockActions}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setShowTimePicker(false)}
+                style={styles.clockAction}
+              >
+                <Text style={styles.clockCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={confirmTime}
+                style={[styles.clockAction, styles.clockConfirmButton]}
+              >
+                <Text style={styles.clockConfirmText}>Set time</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };

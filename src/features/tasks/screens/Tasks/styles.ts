@@ -103,6 +103,13 @@ export const createTasksStyles = (colors: {
       gap: 10,
       paddingBottom: 92,
     },
+    itemWrapper: {
+      position: 'relative',
+    },
+    itemWrapperOpen: {
+      elevation: 12,
+      zIndex: 12,
+    },
     itemContainer: {
       alignItems: 'center',
       backgroundColor: colors.surface,
@@ -188,6 +195,45 @@ export const createTasksStyles = (colors: {
     },
     iconColor: {
       color: colors.secondaryText,
+    },
+    taskMenu: {
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+      borderRadius: 12,
+      borderWidth: 1,
+      elevation: 8,
+      paddingHorizontal: 6,
+      position: 'absolute',
+      right: 8,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.16,
+      shadowRadius: 8,
+      top: 52,
+      width: 148,
+      zIndex: 20,
+    },
+    taskMenuItem: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      gap: 10,
+      minHeight: 44,
+      paddingHorizontal: 9,
+    },
+    taskMenuText: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: '500',
+    },
+    deleteMenuText: {
+      color: '#EF4444',
+      fontSize: 15,
+      fontWeight: '500',
+    },
+    taskMenuDivider: {
+      backgroundColor: colors.border,
+      height: StyleSheet.hairlineWidth,
+      marginHorizontal: 8,
     },
     emptyMessage: {
       color: colors.secondaryText,

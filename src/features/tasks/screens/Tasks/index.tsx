@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -12,8 +13,10 @@ import {
   ArrowLeft,
   Bell,
   EllipsisVertical,
+  Pencil,
   Plus,
   Search,
+  Trash2,
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '../../../../shared/theme/useAppTheme';
@@ -83,64 +86,100 @@ const TaskItem = ({
   item,
   styles,
   onToggle,
+  menuOpen,
+  onMenuPress,
+  onEdit,
+  onDelete,
 }: {
   item: Task;
   styles: TasksStyles;
   onToggle: () => void;
+  menuOpen: boolean;
+  onMenuPress: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }) => {
   const priorityColor = priorityColors[item.priority];
 
   return (
-    <View style={styles.itemContainer}>
-      <Pressable
-        accessibilityRole="checkbox"
-        accessibilityState={{ checked: item.isCompleted }}
-        accessibilityLabel={item.title}
-        onPress={onToggle}
-        style={[
-          styles.completionIndicator,
-          item.isCompleted && styles.completedIndicator,
-        ]}
-      >
-        {item.isCompleted && <Text style={styles.completionCheck}>✓</Text>}
-      </Pressable>
-      <View style={styles.taskContent}>
-        <Text
-          numberOfLines={1}
-          style={[styles.itemTitle, item.isCompleted && styles.completedTitle]}
+    <View style={[styles.itemWrapper, menuOpen && styles.itemWrapperOpen]}>
+      <View style={styles.itemContainer}>
+        <Pressable
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: item.isCompleted }}
+          accessibilityLabel={item.title}
+          onPress={onToggle}
+          style={[
+            styles.completionIndicator,
+            item.isCompleted && styles.completedIndicator,
+          ]}
         >
-          {item.title}
-        </Text>
-        <View style={styles.taskMetadataRow}>
-          <View style={styles.priorityMetadata}>
-            <View
-              style={[
-                styles.priorityMarker,
-                { backgroundColor: priorityColor },
-              ]}
-            />
-            <Text style={[styles.priorityText, { color: priorityColor }]}>
-              {item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}
-            </Text>
-          </View>
-          {item.dueDate && (
-            <>
-              <Text style={styles.metadataSeparator}>·</Text>
-              <Text style={styles.taskMetadata}>
-                {formatDueDate(item.dueDate)}
+          {item.isCompleted && <Text style={styles.completionCheck}>✓</Text>}
+        </Pressable>
+        <View style={styles.taskContent}>
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.itemTitle,
+              item.isCompleted && styles.completedTitle,
+            ]}
+          >
+            {item.title}
+          </Text>
+          <View style={styles.taskMetadataRow}>
+            <View style={styles.priorityMetadata}>
+              <View
+                style={[
+                  styles.priorityMarker,
+                  { backgroundColor: priorityColor },
+                ]}
+              />
+              <Text style={[styles.priorityText, { color: priorityColor }]}>
+                {item.priority.charAt(0).toUpperCase() + item.priority.slice(1)}
               </Text>
-            </>
-          )}
+            </View>
+            {item.dueDate && (
+              <>
+                <Text style={styles.metadataSeparator}>·</Text>
+                <Text style={styles.taskMetadata}>
+                  {formatDueDate(item.dueDate)}
+                </Text>
+              </>
+            )}
+          </View>
         </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`More options for ${item.title}`}
+          accessibilityState={{ expanded: menuOpen }}
+          hitSlop={10}
+          onPress={onMenuPress}
+          style={styles.moreButton}
+        >
+          <EllipsisVertical color={styles.iconColor.color} size={20} />
+        </Pressable>
       </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`More options for ${item.title}`}
-        hitSlop={10}
-        style={styles.moreButton}
-      >
-        <EllipsisVertical color={styles.iconColor.color} size={20} />
-      </Pressable>
+      {menuOpen && (
+        <View style={styles.taskMenu}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onEdit}
+            style={styles.taskMenuItem}
+          >
+            <Pencil color={styles.iconColor.color} size={17} />
+            <Text style={styles.taskMenuText}>Edit</Text>
+          </Pressable>
+          <View style={styles.taskMenuDivider} />
+          <Pressable
+            accessibilityRole="button"
+            onPress={onDelete}
+            style={styles.taskMenuItem}
+          >
+            <Trash2 color="#EF4444" size={17} />
+            <Text style={styles.deleteMenuText}>Delete</Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 };
@@ -153,6 +192,8 @@ const Tasks = () => {
   const [tasks, setTasks] = useState<Task[]>(sampleTasks);
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateTask, setShowCreateTask] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [openMenuTaskId, setOpenMenuTaskId] = useState<string | null>(null);
 
   const visibleTasks = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase();
@@ -192,6 +233,39 @@ const Tasks = () => {
     setFilter('All');
     setSearchText('');
     setShowCreateTask(false);
+  };
+
+  const updateTask = (task: Task) => {
+    setTasks(currentTasks =>
+      currentTasks.map(currentTask =>
+        currentTask.id === task.id ? task : currentTask,
+      ),
+    );
+    setEditingTask(null);
+  };
+
+  const closeTaskForm = () => {
+    setShowCreateTask(false);
+    setEditingTask(null);
+  };
+
+  const confirmDeleteTask = (task: Task) => {
+    setOpenMenuTaskId(null);
+    Alert.alert(
+      'Delete task',
+      `Are you sure you want to delete "${task.title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () =>
+            setTasks(currentTasks =>
+              currentTasks.filter(currentTask => currentTask.id !== task.id),
+            ),
+        },
+      ],
+    );
   };
 
   return (
@@ -271,6 +345,17 @@ const Tasks = () => {
             item={item}
             styles={styles}
             onToggle={() => toggleTask(item.id)}
+            menuOpen={openMenuTaskId === item.id}
+            onMenuPress={() =>
+              setOpenMenuTaskId(current =>
+                current === item.id ? null : item.id,
+              )
+            }
+            onEdit={() => {
+              setOpenMenuTaskId(null);
+              setEditingTask(item);
+            }}
+            onDelete={() => confirmDeleteTask(item)}
           />
         )}
         ListEmptyComponent={
@@ -289,13 +374,15 @@ const Tasks = () => {
       </Pressable>
       <Modal
         animationType="slide"
-        onRequestClose={() => setShowCreateTask(false)}
+        onRequestClose={closeTaskForm}
         presentationStyle="fullScreen"
-        visible={showCreateTask}
+        visible={showCreateTask || editingTask !== null}
       >
         <CreateTask
-          onCancel={() => setShowCreateTask(false)}
-          onSave={addTask}
+          key={editingTask?.id ?? 'new-task'}
+          initialTask={editingTask ?? undefined}
+          onCancel={closeTaskForm}
+          onSave={editingTask ? updateTask : addTask}
         />
       </Modal>
     </SafeAreaView>
