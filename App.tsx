@@ -7,14 +7,17 @@
 
 
 import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import BottomTabNavigator from './src/app/navigation/BottomTabNavigator';
 
 function App() {
 
   return (
-    <NavigationContainer>
-      <BottomTabNavigator />
-    </NavigationContainer>
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <BottomTabNavigator />
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
 
