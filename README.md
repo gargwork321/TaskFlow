@@ -5,7 +5,7 @@
 **Status:** In development  
 **Platform:** iOS and Android  
 **Language:** TypeScript  
-**Project type:** Portfolio project
+**Project type:** React Native CLI app
 
 ---
 
@@ -34,7 +34,7 @@ The project emphasizes:
 - [ ] Edit task information
 - [ ] Mark tasks complete or incomplete
 - [ ] Delete tasks with confirmation
-- [ ] Persist tasks across app restarts
+- [x] Persist tasks across app restarts with OP-SQLite
 
 ### Search and organization
 
@@ -46,7 +46,7 @@ The project emphasizes:
 
 ### Offline-first behavior
 
-- [ ] Perform core task operations without a network connection
+- [x] Perform core task operations without a network connection
 - [ ] Display online/offline status
 - [ ] Store pending synchronization work
 - [ ] Sync pending changes when connectivity returns
@@ -86,10 +86,10 @@ The intended stack is:
 
 | Area | Technology |
 |---|---|
-| Mobile framework | React Native with Expo |
+| Mobile framework | React Native CLI |
 | Language | TypeScript |
 | Navigation | Expo Router or React Navigation |
-| Local database | SQLite using Expo SQLite |
+| Local database | OP-SQLite |
 | Networking | Fetch API or a small HTTP client wrapper |
 | Connectivity | NetInfo or an Expo-compatible network API |
 | State management | React Context or a lightweight store |
@@ -103,7 +103,7 @@ This is the proposed stack. Keep this table aligned with the dependencies actual
 
 ## Architecture
 
-TaskFlow uses a layered approach to keep UI code separate from task rules and storage concerns.
+TaskFlow uses a layered approach to keep UI code separate from task rules and storage concerns. Task screens use the feature repository at `src/features/tasks/data/tasksRepository.ts`; they do not issue SQL directly.
 
 ```text
 Screens and Components
@@ -133,6 +133,14 @@ Local Task Data           Sync Service
 5. When the API is reachable, the sync service processes pending operations.
 6. On success, the app records the result and updates sync status. On failure, recoverable work remains queued for retry.
 
+### Current local database implementation
+
+- OP-SQLite stores tasks in the device's local `taskflow.db` SQLite database.
+- The repository creates the task schema transactionally and tracks schema versions with SQLite's `user_version` pragma.
+- The existing sample tasks are inserted only on first database setup. Pull-to-refresh reloads persisted data; it does not restore or overwrite the sample tasks.
+- Create, edit, completion, and delete changes are written locally. Deletes are stored as tombstones (`deleted_at`) so a future sync implementation can propagate them.
+- Local changes are marked `pending`, but there is not yet a remote API or durable synchronization queue. Do not treat this status as proof that a sync operation is queued or will be retried.
+
 ### Important synchronization decisions
 
 - **Local write first:** network failure must not undo a successfully saved local action.
@@ -158,6 +166,8 @@ Local Task Data           Sync Service
 | `updatedAt` | Last local update timestamp |
 | `syncStatus` | `synced`, `pending`, or `failed` |
 | `deletedAt` | Optional deletion tombstone timestamp |
+| `list` | Optional task list |
+| `reminder` | Optional reminder choice |
 
 ### Pending sync operation
 
@@ -180,7 +190,7 @@ The exact schema may evolve during implementation. Database migrations should be
 
 ### Prerequisites
 
-Install the supported Node.js LTS version for your selected Expo SDK, plus the package manager you intend to use. For device testing, install Expo Go if supported by the project’s dependencies, or use an appropriate development build. Native tooling may be required for simulator or device workflows.
+Install a Node.js version supported by the React Native project, plus the package manager you intend to use. Native Android/iOS tooling is required to build and run the app.
 
 ### Installation
 
@@ -195,10 +205,10 @@ npm install
 Start the development server:
 
 ```bash
-npx expo start
+npm start
 ```
 
-Follow the Expo CLI instructions to open the app on a simulator or supported device.
+In another terminal, run `npm run android` or `npm run ios`. After installing or changing a native dependency, rebuild the app; for iOS, run `cd ios && pod install` first.
 
 > Replace `<YOUR_GITHUB_REPOSITORY_URL>` with the real repository URL. Use the package manager and scripts defined by the actual project.
 

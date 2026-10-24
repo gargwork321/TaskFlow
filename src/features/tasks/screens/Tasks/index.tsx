@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type React from 'react';
 import {
   Alert,
@@ -35,6 +35,14 @@ import {
   TASK_PRIORITY_COLORS,
   TASK_SYNC_STATUSES,
 } from '../../constants/taskConstants';
+import {
+  createTask as createTaskInDatabase,
+  deleteTask as deleteTaskFromDatabase,
+  initializeTasksDatabase,
+  listTasks,
+  saveTask,
+  updateTaskFields,
+} from '../../data/tasksRepository';
 
 type TaskFilter = (typeof TASK_FILTERS)[number];
 type TasksStyles = ReturnType<typeof createTasksStyles>;
@@ -181,7 +189,9 @@ const Tasks = () => {
   const styles = createTasksStyles(theme.colors);
   const [filter, setFilter] = useState<TaskFilter>('All');
   const [searchText, setSearchText] = useState('');
-  const [tasks, setTasks] = useState<Task[]>(sampleTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [databaseReady, setDatabaseReady] = useState(false);
+  const [databaseError, setDatabaseError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -193,6 +203,30 @@ const Tasks = () => {
   const { height: windowHeight } = Dimensions.get('window');
   const detailsTask = tasks.find(task => task.id === detailsTaskId) ?? null;
   const menuTask = tasks.find(task => task.id === openMenuTaskId) ?? null;
+
+  useEffect(() => {
+    let isMounted = true;
+    initializeTasksDatabase(sampleTasks)
+      .then(loadedTasks => {
+        if (isMounted) {
+          setTasks(loadedTasks);
+          setDatabaseReady(true);
+          setDatabaseError(null);
+        }
+      })
+      .catch(error => {
+        if (isMounted) {
+          const message =
+            error instanceof Error ? error.message : 'Unknown database error.';
+          setDatabaseError(message);
+          setDatabaseReady(true);
+          Alert.alert('Could not load tasks', message);
+        }
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const visibleTasks = useMemo(() => {
     const normalizedSearch = searchText.trim().toLowerCase();
@@ -208,42 +242,65 @@ const Tasks = () => {
     });
   }, [filter, searchText, tasks]);
 
-  const toggleTask = (taskId: string) => {
-    setTasks(currentTasks =>
-      currentTasks.map(task =>
-        task.id === taskId ? { ...task, isCompleted: !task.isCompleted } : task,
-      ),
-    );
+  const reportDatabaseError = (action: string, error: unknown) => {
+    const message =
+      error instanceof Error ? error.message : 'Unknown database error.';
+    setDatabaseError(message);
+    Alert.alert(`Could not ${action}`, message);
   };
 
-  const refreshTasks = () => {
+  const toggleTask = async (taskId: string) => {
+    const task = tasks.find(currentTask => currentTask.id === taskId);
+    if (!task) {
+      return;
+    }
+    try {
+      await updateTaskFields(taskId, { isCompleted: !task.isCompleted });
+      setTasks(await listTasks());
+      setDatabaseError(null);
+    } catch (error) {
+      reportDatabaseError('update task', error);
+    }
+  };
+
+  const refreshTasks = async () => {
     setRefreshing(true);
-    setTasks(currentTasks => [
-      ...currentTasks.filter(
-        task => !sampleTasks.some(sampleTask => sampleTask.id === task.id),
-      ),
-      ...sampleTasks.map(task => ({ ...task })),
-    ]);
-    setRefreshing(false);
+    try {
+      const loadedTasks = await initializeTasksDatabase(sampleTasks);
+      setTasks(loadedTasks);
+      setDatabaseError(null);
+    } catch (error) {
+      reportDatabaseError('load tasks', error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
-  const addTask = (task: Task) => {
-    setTasks(currentTasks => [task, ...currentTasks]);
-    setFilter('All');
-    setSearchText('');
-    setShowCreateTask(false);
+  const addTask = async (task: Task) => {
+    try {
+      await createTaskInDatabase(task);
+      setTasks(await listTasks());
+      setFilter('All');
+      setSearchText('');
+      setShowCreateTask(false);
+      setDatabaseError(null);
+    } catch (error) {
+      reportDatabaseError('save task', error);
+    }
   };
 
-  const updateTask = (task: Task) => {
-    setTasks(currentTasks =>
-      currentTasks.map(currentTask =>
-        currentTask.id === task.id ? task : currentTask,
-      ),
-    );
-    setEditingTask(null);
-    if (returnToDetailsAfterEdit) {
-      setDetailsTaskId(task.id);
-      setReturnToDetailsAfterEdit(false);
+  const updateTask = async (task: Task) => {
+    try {
+      await saveTask(task);
+      setTasks(await listTasks());
+      setEditingTask(null);
+      if (returnToDetailsAfterEdit) {
+        setDetailsTaskId(task.id);
+        setReturnToDetailsAfterEdit(false);
+      }
+      setDatabaseError(null);
+    } catch (error) {
+      reportDatabaseError('save task', error);
     }
   };
 
@@ -264,19 +321,23 @@ const Tasks = () => {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            setTasks(currentTasks =>
-              currentTasks.filter(currentTask => currentTask.id !== task.id),
-            );
-            if (closeDetails) {
-              setDetailsTaskId(null);
-            }
+            deleteTaskFromDatabase(task.id)
+              .then(listTasks)
+              .then(loadedTasks => {
+                setTasks(loadedTasks);
+                if (closeDetails) {
+                  setDetailsTaskId(null);
+                }
+                setDatabaseError(null);
+              })
+              .catch(error => reportDatabaseError('delete task', error));
           },
         },
       ],
     );
   };
 
-  const duplicateTask = (task: Task) => {
+  const duplicateTask = async (task: Task) => {
     const now = new Date().toISOString();
     const duplicate: Task = {
       ...task,
@@ -287,18 +348,24 @@ const Tasks = () => {
       updatedAt: now,
       syncStatus: 'pending',
     };
-    setTasks(currentTasks => [duplicate, ...currentTasks]);
-    setDetailsTaskId(null);
+    try {
+      await createTaskInDatabase(duplicate);
+      setTasks(await listTasks());
+      setDetailsTaskId(null);
+      setDatabaseError(null);
+    } catch (error) {
+      reportDatabaseError('duplicate task', error);
+    }
   };
 
-  const updateTaskDetails = (taskId: string, updates: Partial<Task>) => {
-    setTasks(currentTasks =>
-      currentTasks.map(task =>
-        task.id === taskId
-          ? { ...task, ...updates, updatedAt: new Date().toISOString() }
-          : task,
-      ),
-    );
+  const updateTaskDetails = async (taskId: string, updates: Partial<Task>) => {
+    try {
+      await updateTaskFields(taskId, updates);
+      setTasks(await listTasks());
+      setDatabaseError(null);
+    } catch (error) {
+      reportDatabaseError('update task', error);
+    }
   };
 
   return (
@@ -396,7 +463,13 @@ const Tasks = () => {
           />
         )}
         ListEmptyComponent={
-          <Text style={styles.emptyMessage}>No tasks found.</Text>
+          <Text style={styles.emptyMessage}>
+            {!databaseReady
+              ? 'Loading tasks...'
+              : databaseError
+              ? 'Tasks could not be loaded. Pull down to retry.'
+              : 'No tasks found.'}
+          </Text>
         }
         showsVerticalScrollIndicator={false}
       />
