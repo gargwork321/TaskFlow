@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { APP_COLORS } from '../../../../shared/constants/appConstants';
 
 export const createCreateTaskStyles = (colors: {
   background: string;
@@ -360,7 +361,7 @@ export const createCreateTaskStyles = (colors: {
       fontSize: 15,
     },
     errorText: {
-      color: '#EF4444',
+      color: APP_COLORS.danger,
       fontSize: 14,
       marginTop: 8,
     },

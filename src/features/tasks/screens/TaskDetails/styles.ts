@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { APP_COLORS } from '../../../../shared/constants/appConstants';
 
 export const createTaskDetailsStyles = (colors: {
   background: string;
@@ -133,7 +134,7 @@ export const createTaskDetailsStyles = (colors: {
       fontWeight: '600',
     },
     deleteActionText: {
-      color: '#EF4444',
+      color: APP_COLORS.danger,
       fontSize: 14,
       fontWeight: '600',
     },
@@ -228,7 +229,7 @@ export const createTaskDetailsStyles = (colors: {
       fontSize: 16,
     },
     optionModalDestructiveText: {
-      color: '#EF4444',
+      color: APP_COLORS.danger,
       fontWeight: '600',
     },
     optionModalDivider: {

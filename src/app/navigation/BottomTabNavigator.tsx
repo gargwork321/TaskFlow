@@ -11,6 +11,7 @@ import {
 } from 'lucide-react-native';
 import { useAppTheme } from '../../shared/theme/useAppTheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { APP_COLORS } from '../../shared/constants/appConstants';
 
 const Tab = createBottomTabNavigator();
 
@@ -21,7 +22,7 @@ function TabNavigation() {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#08A66C',
+        tabBarActiveTintColor: APP_COLORS.accent,
         tabBarInactiveTintColor: theme.colors.secondaryText,
         tabBarStyle: {
           backgroundColor: theme.colors.surface,

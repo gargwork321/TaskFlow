@@ -24,6 +24,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Task, TaskPriority } from '../../domain/Task';
 import { useAppTheme } from '../../../../shared/theme/useAppTheme';
 import { createCreateTaskStyles } from './styles';
+import {
+  DEFAULT_TASK_DUE_TIME,
+  TASK_CLOCK_HOURS,
+  TASK_CLOCK_MINUTES,
+  TASK_LISTS,
+  TASK_PRIORITIES,
+  TASK_PRIORITY_COLORS,
+  TASK_REMINDERS,
+  TASK_WEEKDAYS,
+} from '../../constants/taskConstants';
 
 type CreateTaskProps = {
   onCancel: () => void;
@@ -31,25 +41,16 @@ type CreateTaskProps = {
   initialTask?: Task;
 };
 
-const priorities: TaskPriority[] = ['low', 'medium', 'high'];
-const priorityColors: Record<TaskPriority, string> = {
-  low: '#10A875',
-  medium: '#F59E0B',
-  high: '#EF4444',
-};
 type DropdownOption = { label: string; value: string };
 
-const taskLists: DropdownOption[] = [
-  { label: 'Personal', value: 'Personal' },
-  { label: 'Work', value: 'Work' },
-  { label: 'Shopping', value: 'Shopping' },
-];
-const reminders: DropdownOption[] = [
-  { label: 'None', value: 'None' },
-  { label: 'At due time', value: 'At due time' },
-  { label: '15 minutes before', value: '15 minutes before' },
-  { label: '1 hour before', value: '1 hour before' },
-];
+const taskLists: DropdownOption[] = TASK_LISTS.map(value => ({
+  label: value,
+  value,
+}));
+const reminders: DropdownOption[] = TASK_REMINDERS.map(value => ({
+  label: value,
+  value,
+}));
 
 const formatDate = (date: Date) => {
   const year = date.getFullYear();
@@ -78,10 +79,6 @@ const formatTimeLabel = (value: string) => {
     minute: '2-digit',
   });
 };
-
-const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const clockHours = Array.from({ length: 12 }, (_, index) => index + 1);
-const clockMinutes = Array.from({ length: 60 }, (_, index) => index);
 
 type TimePickerStep = 'hour' | 'minute';
 
@@ -122,7 +119,10 @@ const CreateTask = ({ onCancel, onSave, initialTask }: CreateTaskProps) => {
   );
   const [dueTime, setDueTime] = useState(
     initialDueDate && !Number.isNaN(initialDueDate.getTime())
-      ? `${`${initialDueDate.getHours()}`.padStart(2, '0')}:${`${initialDueDate.getMinutes()}`.padStart(2, '0')}`
+      ? `${`${initialDueDate.getHours()}`.padStart(
+          2,
+          '0',
+        )}:${`${initialDueDate.getMinutes()}`.padStart(2, '0')}`
       : '',
   );
   const [calendarMonth, setCalendarMonth] = useState(() => {
@@ -137,7 +137,8 @@ const CreateTask = ({ onCancel, onSave, initialTask }: CreateTaskProps) => {
       return new Date(initialDueDate);
     }
     const noon = new Date();
-    noon.setHours(12, 0, 0, 0);
+    const [hours, minutes] = DEFAULT_TASK_DUE_TIME.split(':').map(Number);
+    noon.setHours(hours, minutes, 0, 0);
     return noon;
   });
   const [taskList, setTaskList] = useState(
@@ -214,8 +215,7 @@ const CreateTask = ({ onCancel, onSave, initialTask }: CreateTaskProps) => {
 
   const changeCalendarMonth = (offset: number) => {
     setCalendarMonth(
-      month =>
-        new Date(month.getFullYear(), month.getMonth() + offset, 1),
+      month => new Date(month.getFullYear(), month.getMonth() + offset, 1),
     );
   };
 
@@ -244,7 +244,8 @@ const CreateTask = ({ onCancel, onSave, initialTask }: CreateTaskProps) => {
       setSelectedTime(time);
     } else {
       const noon = new Date();
-      noon.setHours(12, 0, 0, 0);
+      const [hours, minutes] = DEFAULT_TASK_DUE_TIME.split(':').map(Number);
+      noon.setHours(hours, minutes, 0, 0);
       setSelectedTime(noon);
     }
     setTimePickerStep('hour');
@@ -267,7 +268,10 @@ const CreateTask = ({ onCancel, onSave, initialTask }: CreateTaskProps) => {
 
   const confirmTime = () => {
     setDueTime(
-      `${`${selectedTime.getHours()}`.padStart(2, '0')}:${`${selectedTime.getMinutes()}`.padStart(2, '0')}`,
+      `${`${selectedTime.getHours()}`.padStart(
+        2,
+        '0',
+      )}:${`${selectedTime.getMinutes()}`.padStart(2, '0')}`,
     );
     setShowTimePicker(false);
     setError('');
@@ -351,7 +355,7 @@ const CreateTask = ({ onCancel, onSave, initialTask }: CreateTaskProps) => {
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Priority</Text>
             <View style={styles.priorityOptions}>
-              {priorities.map(option => {
+              {TASK_PRIORITIES.map(option => {
                 const selected = option === priority;
                 return (
                   <Pressable
@@ -362,15 +366,15 @@ const CreateTask = ({ onCancel, onSave, initialTask }: CreateTaskProps) => {
                     style={[
                       styles.priorityButton,
                       selected && {
-                        backgroundColor: `${priorityColors[option]}22`,
-                        borderColor: priorityColors[option],
+                        backgroundColor: `${TASK_PRIORITY_COLORS[option]}22`,
+                        borderColor: TASK_PRIORITY_COLORS[option],
                       },
                     ]}
                   >
                     <Text
                       style={[
                         styles.priorityText,
-                        selected && { color: priorityColors[option] },
+                        selected && { color: TASK_PRIORITY_COLORS[option] },
                       ]}
                     >
                       {option.charAt(0).toUpperCase() + option.slice(1)}
@@ -397,19 +401,13 @@ const CreateTask = ({ onCancel, onSave, initialTask }: CreateTaskProps) => {
               style={styles.inlineField}
             >
               <Text
-                style={[
-                  styles.inlineInput,
-                  !dueDate && styles.placeholderText,
-                ]}
+                style={[styles.inlineInput, !dueDate && styles.placeholderText]}
               >
                 {dueDate
                   ? formatDateLabel(new Date(`${dueDate}T12:00:00`))
                   : 'Select date'}
               </Text>
-              <CalendarDays
-                color={styles.inlineIcon.color}
-                size={20}
-              />
+              <CalendarDays color={styles.inlineIcon.color} size={20} />
             </Pressable>
             {showCalendar && (
               <View style={styles.calendar}>
@@ -438,14 +436,16 @@ const CreateTask = ({ onCancel, onSave, initialTask }: CreateTaskProps) => {
                   </Pressable>
                 </View>
                 <View style={styles.calendarGrid}>
-                  {weekdays.map(day => (
+                  {TASK_WEEKDAYS.map(day => (
                     <Text key={day} style={styles.weekday}>
                       {day}
                     </Text>
                   ))}
                   {calendarDays.map((date, index) => {
                     if (!date) {
-                      return <View key={`blank-${index}`} style={styles.dayCell} />;
+                      return (
+                        <View key={`blank-${index}`} style={styles.dayCell} />
+                      );
                     }
 
                     const selected = dueDate === formatDate(date);
@@ -456,10 +456,7 @@ const CreateTask = ({ onCancel, onSave, initialTask }: CreateTaskProps) => {
                         accessibilityState={{ selected }}
                         key={formatDate(date)}
                         onPress={() => selectCalendarDate(date)}
-                        style={[
-                          styles.dayCell,
-                          selected && styles.selectedDay,
-                        ]}
+                        style={[styles.dayCell, selected && styles.selectedDay]}
                       >
                         <Text
                           style={[
@@ -498,17 +495,11 @@ const CreateTask = ({ onCancel, onSave, initialTask }: CreateTaskProps) => {
               style={styles.inlineField}
             >
               <Text
-                style={[
-                  styles.inlineInput,
-                  !dueTime && styles.placeholderText,
-                ]}
+                style={[styles.inlineInput, !dueTime && styles.placeholderText]}
               >
                 {dueTime ? formatTimeLabel(dueTime) : 'Select time'}
               </Text>
-              <Clock3
-                color={styles.inlineIcon.color}
-                size={20}
-              />
+              <Clock3 color={styles.inlineIcon.color} size={20} />
             </Pressable>
             <Text style={styles.helperText}>
               Select a time or leave blank to use 12:00 PM.
@@ -605,7 +596,7 @@ const CreateTask = ({ onCancel, onSave, initialTask }: CreateTaskProps) => {
               <View style={styles.periodOptions}>
                 {[false, true].map(isAfternoon => {
                   const selected =
-                    (selectedTime.getHours() >= 12) === isAfternoon;
+                    selectedTime.getHours() >= 12 === isAfternoon;
                   return (
                     <Pressable
                       accessibilityRole="radio"
@@ -660,9 +651,8 @@ const CreateTask = ({ onCancel, onSave, initialTask }: CreateTaskProps) => {
               contentContainerStyle={styles.timeOptionsContent}
             >
               {timePickerStep === 'hour'
-                ? clockHours.map(hour => {
-                    const selected =
-                      selectedTime.getHours() % 12 === hour % 12;
+                ? TASK_CLOCK_HOURS.map(hour => {
+                    const selected = selectedTime.getHours() % 12 === hour % 12;
                     return (
                       <Pressable
                         accessibilityRole="button"
@@ -686,7 +676,7 @@ const CreateTask = ({ onCancel, onSave, initialTask }: CreateTaskProps) => {
                       </Pressable>
                     );
                   })
-                : clockMinutes.map(minute => {
+                : TASK_CLOCK_MINUTES.map(minute => {
                     const selected = selectedTime.getMinutes() === minute;
                     return (
                       <Pressable

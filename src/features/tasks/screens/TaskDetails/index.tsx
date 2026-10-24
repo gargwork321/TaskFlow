@@ -16,13 +16,16 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type {
-  Task,
-  TaskPriority,
-  TaskSyncStatus,
-} from '../../domain/Task';
+import type { Task } from '../../domain/Task';
 import { useAppTheme } from '../../../../shared/theme/useAppTheme';
 import { createTaskDetailsStyles } from './styles';
+import {
+  TASK_LISTS,
+  TASK_PRIORITY_COLORS,
+  TASK_REMINDERS,
+  TASK_SYNC_STATUS_LABELS,
+} from '../../constants/taskConstants';
+import { APP_COLORS } from '../../../../shared/constants/appConstants';
 
 type TaskDetailsProps = {
   task: Task;
@@ -34,21 +37,6 @@ type TaskDetailsProps = {
   onMoveTo: (list: string) => void;
   onSetReminder: (reminder: string) => void;
 };
-
-const priorityColors: Record<TaskPriority, string> = {
-  high: '#EF4444',
-  medium: '#F59E0B',
-  low: '#10A875',
-};
-
-const syncStatusLabels: Record<TaskSyncStatus, string> = {
-  synced: 'Synced',
-  pending: 'Pending',
-  failed: 'Failed',
-};
-
-const lists = ['Personal', 'Work', 'Shopping'];
-const reminders = ['None', 'At due time', '15 minutes before', '1 hour before'];
 
 type OptionModalAction = {
   label: string;
@@ -91,13 +79,13 @@ const TaskDetails = ({
 }: TaskDetailsProps) => {
   const theme = useAppTheme();
   const styles = createTaskDetailsStyles(theme.colors);
-  const priorityColor = priorityColors[task.priority];
+  const priorityColor = TASK_PRIORITY_COLORS[task.priority];
   const syncColor =
     task.syncStatus === 'synced'
-      ? '#16A34A'
+      ? APP_COLORS.success
       : task.syncStatus === 'failed'
-        ? '#EF4444'
-        : '#F59E0B';
+      ? APP_COLORS.danger
+      : APP_COLORS.warning;
   const [optionModal, setOptionModal] = useState<OptionModalState | null>(null);
 
   const chooseOption = (
@@ -155,7 +143,9 @@ const TaskDetails = ({
           <Pressable
             accessibilityRole="checkbox"
             accessibilityLabel={
-              task.isCompleted ? 'Mark task as active' : 'Mark task as completed'
+              task.isCompleted
+                ? 'Mark task as active'
+                : 'Mark task as completed'
             }
             accessibilityState={{ checked: task.isCompleted }}
             onPress={onToggleComplete}
@@ -197,10 +187,7 @@ const TaskDetails = ({
               </View>
               {task.dueDate && (
                 <View style={styles.dueDate}>
-                  <CalendarDays
-                    color={theme.colors.secondaryText}
-                    size={16}
-                  />
+                  <CalendarDays color={theme.colors.secondaryText} size={16} />
                   <Text style={styles.dueDateText}>
                     {formatDueDate(task.dueDate)}
                   </Text>
@@ -228,7 +215,7 @@ const TaskDetails = ({
             onPress={onDelete}
             style={styles.actionButton}
           >
-            <Trash2 color="#EF4444" size={22} />
+            <Trash2 color={APP_COLORS.danger} size={22} />
             <Text style={styles.deleteActionText}>Delete</Text>
           </Pressable>
           <Pressable
@@ -247,7 +234,11 @@ const TaskDetails = ({
           style={styles.detailRow}
         >
           {task.isCompleted ? (
-            <Check color={theme.colors.text} size={22} style={styles.detailRowIcon} />
+            <Check
+              color={theme.colors.text}
+              size={22}
+              style={styles.detailRowIcon}
+            />
           ) : (
             <Circle
               color={theme.colors.text}
@@ -264,7 +255,7 @@ const TaskDetails = ({
         <Pressable
           accessibilityRole="button"
           onPress={() =>
-            chooseOption('Move task to', lists, onMoveTo)
+            chooseOption('Move task to', [...TASK_LISTS], onMoveTo)
           }
           style={styles.detailRow}
         >
@@ -287,7 +278,7 @@ const TaskDetails = ({
         <Pressable
           accessibilityRole="button"
           onPress={() =>
-            chooseOption('Set reminder', reminders, onSetReminder)
+            chooseOption('Set reminder', [...TASK_REMINDERS], onSetReminder)
           }
           style={styles.detailRow}
         >
@@ -315,7 +306,7 @@ const TaskDetails = ({
           />
           <Text style={styles.detailRowText}>View Sync Status</Text>
           <Text style={[styles.syncValue, { color: syncColor }]}>
-            {syncStatusLabels[task.syncStatus]}
+            {TASK_SYNC_STATUS_LABELS[task.syncStatus]}
           </Text>
         </View>
 

@@ -1,6 +1,5 @@
 import { StyleSheet } from 'react-native';
-
-const green = '#08A66C';
+import { APP_COLORS } from '../../../../shared/constants/appConstants';
 
 export const createTasksStyles = (colors: {
   background: string;
@@ -41,7 +40,7 @@ export const createTasksStyles = (colors: {
       width: 40,
     },
     notificationDot: {
-      backgroundColor: '#EF4444',
+      backgroundColor: APP_COLORS.danger,
       borderColor: colors.background,
       borderRadius: 5,
       borderWidth: 1.5,
@@ -67,8 +66,8 @@ export const createTasksStyles = (colors: {
       justifyContent: 'center',
     },
     selectedFilter: {
-      backgroundColor: green,
-      borderColor: green,
+      backgroundColor: APP_COLORS.accent,
+      borderColor: APP_COLORS.accent,
     },
     filterText: {
       color: colors.secondaryText,
@@ -137,8 +136,8 @@ export const createTasksStyles = (colors: {
       width: 24,
     },
     completedIndicator: {
-      backgroundColor: green,
-      borderColor: green,
+      backgroundColor: APP_COLORS.accent,
+      borderColor: APP_COLORS.accent,
     },
     completionCheck: {
       color: '#FFFFFF',
@@ -237,7 +236,7 @@ export const createTasksStyles = (colors: {
       fontWeight: '500',
     },
     deleteMenuText: {
-      color: '#EF4444',
+      color: APP_COLORS.danger,
       fontSize: 15,
       fontWeight: '500',
     },
@@ -254,7 +253,7 @@ export const createTasksStyles = (colors: {
     },
     addButton: {
       alignItems: 'center',
-      backgroundColor: green,
+      backgroundColor: APP_COLORS.accent,
       borderRadius: 32,
       bottom: 22,
       elevation: 6,
@@ -262,7 +261,7 @@ export const createTasksStyles = (colors: {
       justifyContent: 'center',
       position: 'absolute',
       right: 22,
-      shadowColor: green,
+      shadowColor: APP_COLORS.accent,
       shadowOffset: { width: 0, height: 5 },
       shadowOpacity: 0.24,
       shadowRadius: 8,

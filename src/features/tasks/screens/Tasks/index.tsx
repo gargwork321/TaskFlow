@@ -25,32 +25,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '../../../../shared/theme/useAppTheme';
 import { createTasksStyles } from './styles';
 import dummyTasks from '../../data/dummyTasks.json';
-import type {
-  Task,
-  TaskPriority,
-  TaskSyncStatus,
-} from '../../domain/Task';
+import type { Task, TaskPriority, TaskSyncStatus } from '../../domain/Task';
 import CreateTask from '../CreateTask';
 import TaskDetails from '../TaskDetails';
+import { APP_COLORS } from '../../../../shared/constants/appConstants';
+import {
+  TASK_FILTERS,
+  TASK_PRIORITIES,
+  TASK_PRIORITY_COLORS,
+  TASK_SYNC_STATUSES,
+} from '../../constants/taskConstants';
 
-type TaskFilter = 'All' | 'Active' | 'Completed';
+type TaskFilter = (typeof TASK_FILTERS)[number];
 type TasksStyles = ReturnType<typeof createTasksStyles>;
 type MenuPosition = { top: number; right: number };
 
-const filters: TaskFilter[] = ['All', 'Active', 'Completed'];
-
-const priorityColors: Record<Task['priority'], string> = {
-  high: '#EF4444',
-  medium: '#F59E0B',
-  low: '#10A875',
-};
-
-const taskPriorities: TaskPriority[] = ['low', 'medium', 'high'];
-const syncStatuses: TaskSyncStatus[] = ['synced', 'pending', 'failed'];
 const isTaskPriority = (value: string): value is TaskPriority =>
-  taskPriorities.some(priority => priority === value);
+  TASK_PRIORITIES.some(priority => priority === value);
 const isSyncStatus = (value: string): value is TaskSyncStatus =>
-  syncStatuses.some(status => status === value);
+  TASK_SYNC_STATUSES.some(status => status === value);
 
 const sampleTasks: Task[] = dummyTasks.map(task => {
   if (!isTaskPriority(task.priority) || !isSyncStatus(task.syncStatus)) {
@@ -102,7 +95,7 @@ const TaskItem = ({
   onOpenDetails: () => void;
   onMenuPress: (position: MenuPosition) => void;
 }) => {
-  const priorityColor = priorityColors[item.priority];
+  const priorityColor = TASK_PRIORITY_COLORS[item.priority];
   const moreButtonRef = useRef<React.ComponentRef<typeof Pressable>>(null);
   const { width: windowWidth } = Dimensions.get('window');
 
@@ -198,8 +191,7 @@ const Tasks = () => {
   const [openMenuTaskId, setOpenMenuTaskId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
   const { height: windowHeight } = Dimensions.get('window');
-  const detailsTask =
-    tasks.find(task => task.id === detailsTaskId) ?? null;
+  const detailsTask = tasks.find(task => task.id === detailsTaskId) ?? null;
   const menuTask = tasks.find(task => task.id === openMenuTaskId) ?? null;
 
   const visibleTasks = useMemo(() => {
@@ -271,15 +263,14 @@ const Tasks = () => {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () =>
-            {
-              setTasks(currentTasks =>
-                currentTasks.filter(currentTask => currentTask.id !== task.id),
-              );
-              if (closeDetails) {
-                setDetailsTaskId(null);
-              }
-            },
+          onPress: () => {
+            setTasks(currentTasks =>
+              currentTasks.filter(currentTask => currentTask.id !== task.id),
+            );
+            if (closeDetails) {
+              setDetailsTaskId(null);
+            }
+          },
         },
       ],
     );
@@ -334,7 +325,7 @@ const Tasks = () => {
       </View>
 
       <View style={styles.filters}>
-        {filters.map(option => {
+        {TASK_FILTERS.map(option => {
           const selected = filter === option;
           return (
             <Pressable
@@ -480,7 +471,7 @@ const Tasks = () => {
                 onPress={() => confirmDeleteTask(menuTask)}
                 style={styles.taskMenuItem}
               >
-                <Trash2 color="#EF4444" size={17} />
+                <Trash2 color={APP_COLORS.danger} size={17} />
                 <Text style={styles.deleteMenuText}>Delete</Text>
               </Pressable>
             </View>
@@ -491,9 +482,7 @@ const Tasks = () => {
         animationType="slide"
         onRequestClose={closeTaskForm}
         presentationStyle="fullScreen"
-        visible={
-          showCreateTask || editingTask !== null || detailsTask !== null
-        }
+        visible={showCreateTask || editingTask !== null || detailsTask !== null}
       >
         {detailsTask ? (
           <TaskDetails
